@@ -3,29 +3,40 @@ import datetime as date
 from multiprocessing.pool import ThreadPool
 import time
 
-pool = ThreadPool(5)
+pool = ThreadPool(8)
 
 class Block:
 
     def __init__(self, index, timestamp, data, previous_hash):
-
+        self.solved = False
         self.index = index
         self.timestamp = timestamp
         self.data = data
         self.previous_hash = previous_hash
-        self.hash = pool.map_async(self.hash_block, [0,100000,1000000,10000000]).get()[0]
-        print "done"
+        l = pool.map_async(self.hash_block, [0,100000,1000000,10000000,100000000, 105000000]).get()
+        if l[0]:
+            self.hash = l[0]
+        elif l[1]:
+            self.hash = l[1]
+        elif l[2]:
+            self.hash = l[2]
+        elif l[3]:
+            self.hash = l[3]
+        elif l[4]:
+            self.hash = l[4]
+
 
     def hash_block(self, nonce):
         sha = hasher.sha256()
-        solved = False
-        while not solved:
+        while not self.solved:
             sha.update(str(self.index) + str(self.timestamp) + str(self.data) + str(self.previous_hash) + str(nonce))
             hash = sha.hexdigest()
             nonce += 1
             if hash.startswith("000000"):
+                self.solved = True
                 print hash, nonce
                 return hash
+        return
 
 class Blockchain:
 
