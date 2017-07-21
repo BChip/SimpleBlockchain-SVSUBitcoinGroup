@@ -1,40 +1,43 @@
 import hashlib as hasher
 import datetime as date
-from multiprocessing.pool import ThreadPool
 import time
 
-pool = ThreadPool(8)
+HASH_TARGET = "0000"
 
 class Block:
 
-    def __init__(self, index, timestamp, data, previous_hash):
+    def __init__(self, index, timestamp, data, previous_hash, nonce):
         self.solved = False
         self.index = index
         self.timestamp = timestamp
         self.data = data
         self.previous_hash = previous_hash
-        l = pool.map_async(self.hash_block, [0,100000,1000000,10000000,100000000, 105000000]).get()
-        if l[0]:
-            self.hash = l[0]
-        elif l[1]:
-            self.hash = l[1]
-        elif l[2]:
-            self.hash = l[2]
-        elif l[3]:
-            self.hash = l[3]
-        elif l[4]:
-            self.hash = l[4]
-
+        if nonce:
+            hash = self.hash_block(nonce)
+            if hash:
+                self.hash = hash
+        elif data == "Genesis Block":
+            self.hash = self.hash_genesis()
+        else:
+            return
 
     def hash_block(self, nonce):
         sha = hasher.sha256()
+        sha.update(str(self.index) + str(self.timestamp) + str(self.data) + str(self.previous_hash) + str(nonce))
+        hash = sha.hexdigest()
+        if hash.startswith(HASH_TARGET):
+            return hash
+        return None
+
+    def hash_genesis(self):
+        nonce = 0
         while not self.solved:
+            sha = hasher.sha256()
             sha.update(str(self.index) + str(self.timestamp) + str(self.data) + str(self.previous_hash) + str(nonce))
             hash = sha.hexdigest()
             nonce += 1
-            if hash.startswith("000000"):
+            if hash.startswith(HASH_TARGET):
                 self.solved = True
-                print hash, nonce
                 return hash
         return
 
@@ -45,32 +48,58 @@ class Blockchain:
         self.previous_block = self.blockchain[0]
 
     def create_genesis_block(self):
-        return Block(0, date.datetime.now(), "Genesis Block", "0")
+        return Block(0, date.datetime.now(), "Genesis Block", "0", None)
 
-    def next_block(self, last_block, data):
-        this_index = last_block.index + 1
-        this_timestamp = date.datetime.now()
-        this_data = data
-        this_hash = last_block.hash
-        return Block(this_index, this_timestamp, this_data, this_hash)
+    def next_block(self, last_block, timestamp, data, nonce):
+        index = last_block.index + 1
+        if nonce:
+            return Block(index, timestamp, data, last_block.hash, nonce)
+        else:
+            return Block(index, timestamp, data, last_block.hash, nonce)
 
-    def add(self, data):
-        block_to_add = self.next_block(self.previous_block, data)
-        self.blockchain.append(block_to_add)
-        self.previous_block = block_to_add
+    def add(self, data, nonce=None, timestamp = date.datetime.now()):
+        if nonce:
+            block_to_add = self.next_block(self.previous_block, timestamp, data, nonce)
+            if block_to_add.hash:
+                self.blockchain.append(block_to_add)
+                self.previous_block = block_to_add
+                print "success!"
+        else:
+            return self.next_block(self.previous_block, timestamp, data, nonce)
 
     def get(self, index):
         return self.blockchain[index]
 
-    def returnChain(self):
+    def getChain(self):
         return self.blockchain
 
+
+
+
+
+
+
+
+
+
 blockchain = Blockchain()
-num_of_blocks_to_add = 2
+num_of_blocks_to_add = 1
 
-for i in range (1, num_of_blocks_to_add):
-    blockchain.add(date.datetime.now())
+addBlock = blockchain.add("yo")
+if addBlock:
+    sha = hasher.sha256()
+    solved = False
+    nonce = 0
 
-b = blockchain.returnChain()
-for block in b:
-    print block.hash
+    while not solved:
+        sha = hasher.sha256()
+        sha.update(str(addBlock.index) + str(addBlock.timestamp) + str(addBlock.data) + str(addBlock.previous_hash) + str(nonce))
+        hash = sha.hexdigest()
+        if hash.startswith(HASH_TARGET):
+            solved = True
+            blockchain.add(addBlock.data, nonce, addBlock.timestamp)
+        nonce += 1
+
+chain = blockchain.getChain()
+for block in chain:
+    print block.data
