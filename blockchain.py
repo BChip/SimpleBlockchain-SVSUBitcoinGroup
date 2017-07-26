@@ -2,7 +2,7 @@ import hashlib as hasher
 import datetime as date
 import time
 
-HASH_TARGET = "0000"
+HASH_TARGET = "00000"
 
 class Block:
 
@@ -16,7 +16,7 @@ class Block:
             hash = self.hash_block(nonce)
             if hash:
                 self.hash = hash
-        elif data == "Genesis Block":
+        elif index == 0:
             self.hash = self.hash_genesis()
         else:
             return
@@ -41,7 +41,7 @@ class Block:
                 return hash
         return
 
-class Blockchain:
+class Chain:
 
     def __init__(self):
         self.blockchain = [self.create_genesis_block()]
@@ -57,15 +57,14 @@ class Blockchain:
         else:
             return Block(index, timestamp, data, last_block.hash, nonce)
 
-    def add(self, data, nonce=None, timestamp = date.datetime.now()):
+    def add(self, data, nonce=None, timestamp = None):
         if nonce:
             block_to_add = self.next_block(self.previous_block, timestamp, data, nonce)
             if block_to_add.hash:
                 self.blockchain.append(block_to_add)
                 self.previous_block = block_to_add
-                print "success!"
         else:
-            return self.next_block(self.previous_block, timestamp, data, nonce)
+            return self.next_block(self.previous_block, date.datetime.now(), data, nonce)
 
     def get(self, index):
         return self.blockchain[index]
@@ -77,29 +76,33 @@ class Blockchain:
 
 
 
+########CLIENT########
+def add(data):
+    addBlock = blockchain.add(data)
+    if addBlock:
+        hash(addBlock)
 
-
-
-
-
-blockchain = Blockchain()
-num_of_blocks_to_add = 1
-
-addBlock = blockchain.add("yo")
-if addBlock:
+def hash(block):
     sha = hasher.sha256()
     solved = False
     nonce = 0
 
     while not solved:
         sha = hasher.sha256()
-        sha.update(str(addBlock.index) + str(addBlock.timestamp) + str(addBlock.data) + str(addBlock.previous_hash) + str(nonce))
+        sha.update(str(block.index) + str(block.timestamp) + str(block.data) + str(block.previous_hash) + str(nonce))
         hash = sha.hexdigest()
         if hash.startswith(HASH_TARGET):
             solved = True
-            blockchain.add(addBlock.data, nonce, addBlock.timestamp)
+            blockchain.add(block.data, nonce, block.timestamp)
         nonce += 1
+
+
+
+blockchain = Chain()
+add("suh dud")
+add("i rock")
+add("cat dog")
 
 chain = blockchain.getChain()
 for block in chain:
-    print block.data
+    print block.index, block.data, block.timestamp, block.hash
