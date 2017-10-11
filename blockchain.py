@@ -6,34 +6,36 @@ HASH_TARGET = "00000"
 
 class Block:
 
-    def __init__(self, index, timestamp, data, previous_hash, nonce):
+    #nonce is a 32-bit field (32 leading zeros in hash target)
+    #hash is 64-bit field
+    def __init__(self, index, timestamp, data, previousHash, nonce):
         self.solved = False
         self.index = index
         self.timestamp = timestamp
         self.data = data
-        self.previous_hash = previous_hash
+        self.previousHash = previousHash
         if nonce:
-            hash = self.hash_block(nonce)
+            hash = self.verifyBlock(nonce)
             if hash:
                 self.hash = hash
         elif index == 0:
-            self.hash = self.hash_genesis()
+            self.hash = self.hashGenesis()
         else:
             return
 
-    def hash_block(self, nonce):
+    def verifyBlock(self, nonce):
         sha = hasher.sha256()
-        sha.update(str(self.index) + str(self.timestamp) + str(self.data) + str(self.previous_hash) + str(nonce))
+        sha.update(str(self.index) + str(self.timestamp) + str(self.data) + str(self.previousHash) + str(nonce))
         hash = sha.hexdigest()
         if hash.startswith(HASH_TARGET):
             return hash
         return None
 
-    def hash_genesis(self):
+    def hashGenesis(self):
         nonce = 0
         while not self.solved:
             sha = hasher.sha256()
-            sha.update(str(self.index) + str(self.timestamp) + str(self.data) + str(self.previous_hash) + str(nonce))
+            sha.update(str(self.index) + str(self.timestamp) + str(self.data) + str(self.previousHash) + str(nonce))
             hash = sha.hexdigest()
             nonce += 1
             if hash.startswith(HASH_TARGET):
@@ -44,27 +46,24 @@ class Block:
 class Chain:
 
     def __init__(self):
-        self.blockchain = [self.create_genesis_block()]
-        self.previous_block = self.blockchain[0]
+        self.blockchain = [self.createGenesisBlock()]
+        self.previousBlock = self.blockchain[0]
 
-    def create_genesis_block(self):
+    def createGenesisBlock(self):
         return Block(0, date.datetime.now(), "Genesis Block", "0", None)
 
-    def next_block(self, last_block, timestamp, data, nonce):
+    def nextBlock(self, last_block, timestamp, data, nonce):
         index = last_block.index + 1
-        if nonce:
-            return Block(index, timestamp, data, last_block.hash, nonce)
-        else:
-            return Block(index, timestamp, data, last_block.hash, nonce)
+        return Block(index, timestamp, data, last_block.hash, nonce)
 
     def add(self, data, nonce=None, timestamp = None):
         if nonce:
-            block_to_add = self.next_block(self.previous_block, timestamp, data, nonce)
-            if block_to_add.hash:
-                self.blockchain.append(block_to_add)
-                self.previous_block = block_to_add
+            blockToAdd = self.nextBlock(self.previousBlock, timestamp, data, nonce)
+            if blockToAdd.hash:
+                self.blockchain.append(blockToAdd)
+                self.previousBlock = blockToAdd
         else:
-            return self.next_block(self.previous_block, date.datetime.now(), data, nonce)
+            return self.nextBlock(self.previousBlock, date.datetime.now(), data, nonce)
 
     def get(self, index):
         return self.blockchain[index]
@@ -73,36 +72,37 @@ class Chain:
         return self.blockchain
 
 
-
-
-
-########CLIENT########
-def add(data):
-    addBlock = blockchain.add(data)
+######## CLIENT ########
+def add(data, chain):
+    addBlock = chain.add(data)
     if addBlock:
-        hash(addBlock)
+        hash(addBlock, chain)
 
-def hash(block):
+def hash(block, chain):
     sha = hasher.sha256()
     solved = False
     nonce = 0
 
     while not solved:
         sha = hasher.sha256()
-        sha.update(str(block.index) + str(block.timestamp) + str(block.data) + str(block.previous_hash) + str(nonce))
+        sha.update(str(block.index) + str(block.timestamp) + str(block.data) + str(block.previousHash) + str(nonce))
         hash = sha.hexdigest()
         if hash.startswith(HASH_TARGET):
             solved = True
-            blockchain.add(block.data, nonce, block.timestamp)
+            chain.add(block.data, nonce, block.timestamp)
         nonce += 1
 
 
+####### MAIN #######
+devChain = Chain()
+prodChain = Chain()
 
-blockchain = Chain()
-add("suh dud")
-add("i rock")
-add("cat dog")
+add("This is my developer chain dawg!", devChain)
+add("Rockin on the prod chain!!!!", prodChain)
+add("SVSU Rulez", prodChain)
 
-chain = blockchain.getChain()
-for block in chain:
+for block in devChain.getChain():
+    print block.index, block.data, block.timestamp, block.hash
+print "---------------------------------------------------------"
+for block in prodChain.getChain():
     print block.index, block.data, block.timestamp, block.hash
