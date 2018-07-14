@@ -102,7 +102,7 @@ add("Rockin on the prod chain!!!!", prodChain)
 add("SVSU Rulez", prodChain)
 
 for block in devChain.getChain():
-    print block.index, block.data, block.timestamp, block.hash
-print "---------------------------------------------------------"
+    print(block.index, block.data, block.timestamp, block.hash)
+print("---------------------------------------------------------")
 for block in prodChain.getChain():
-    print block.index, block.data, block.timestamp, block.hash
+    print(block.index, block.data, block.timestamp, block.hash)
