@@ -70,5 +70,3 @@ def main():
 
 
 main()
-
-print(hasher.sha256("The blockchain is so cool!".encode("utf-8")).hexdigest())
