@@ -62,7 +62,9 @@ class Chain:
 
 def main():
     blockchain = Chain()
-    blockchain.addBlock("First Block")
+    blockchain.addBlock("New Block 1")
+    blockchain.addBlock("New Block 2")
+    blockchain.addBlock("New Block 3")
     for block in blockchain.getChain():
         print(block.index, block.timestamp, block.previousHash,
               block.hash, block.data, block.nonce)
