@@ -1,14 +1,13 @@
 import hashlib as hasher
 import datetime as date
 
-HASH_TARGET = "000000"
 # https://guggero.github.io/blockchain-demo/#!/hash
+
+HASH_TARGET = "0000"
 
 
 class Block:
 
-    # nonce is a 32-bit field (32 leading zeros in hash target)
-    # hash is 64-bit field
     def __init__(self, index, timestamp, data, hash="0", previous_hash=None):
         self.index = index
         self.timestamp = timestamp
@@ -71,3 +70,5 @@ def main():
 
 
 main()
+
+print(hasher.sha256("The blockchain is so cool!".encode("utf-8")).hexdigest())
