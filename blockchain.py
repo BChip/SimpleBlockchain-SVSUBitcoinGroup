@@ -1,74 +1,134 @@
-import hashlib as hasher
-import datetime as date
+import hashlib
+import datetime
 
-# https://guggero.github.io/blockchain-demo/#!/hash
+from dataclasses import dataclass
 
-HASH_TARGET = "0000"
+HASH_TARGET: str = "0000"
 
 
+@dataclass(frozen=True)
 class Block:
 
-    def __init__(self, index, timestamp, data, hash="0", previous_hash=None):
-        self.index = index
-        self.timestamp = timestamp
-        self.data = data
-        self.previousHash = previous_hash
-        self.nonce = 0
-        self.hash = hash
+    index: int
+    timestamp: str
+    data: str
+    previous_hash: str
+    nonce: int = 0
+    hash: str = "0"
 
-    def hashBlock(self):
-        data = (str(self.index) + str(self.data) + str(self.timestamp) +
-                str(self.previousHash) + str(self.nonce)).encode('utf-8')
-        return hasher.sha256(data).hexdigest()
+    @property
+    def hash_data(self) -> bytes:
+        return f"{str(self.index)}{str(self.data)}{str(self.timestamp)}{str(self.previous_hash)}{str(self.nonce)}".encode(
+            "utf-8"
+        )
+
+    def __str__(self) -> str:
+        return f"{self.data}\nindex={self.index}\ntime={self.timestamp}\nprevious_hash={self.previous_hash}\nhash={self.hash}\nnonce={self.nonce}\n"
 
 
 class Chain:
 
-    def __init__(self):
-        self.blockchain = []
-        self.addBlock("Genesis Block")
+    __blockchain: list[Block] = []
 
-    def addBlock(self, data):
-        if(len(self.blockchain) == 0):
-            previous_hash = "0"*64
-            newBlock = Block(len(self.blockchain),
-                             date.datetime.now(), data, previous_hash=previous_hash)
-        else:
-            previousBlock = self.blockchain[-1]
-            newBlock = Block(len(self.blockchain),
-                             date.datetime.now(), data, previous_hash=previousBlock.hash)
-        newBlock.hash = self.proofOfWork(newBlock)
-        self.blockchain.append(newBlock)
+    @property
+    def blockchain(self) -> list:
+        """blockchain getter
 
-    def getChain(self):
-        return self.blockchain
+        Returns:
+            list: copy of the blockchain
+        """
+        return self.__blockchain[:]
 
-    def proofOfWork(self, block):
-        while block.hash[:len(HASH_TARGET)] != HASH_TARGET:
-            block.nonce += 1
-            block.hash = block.hashBlock()
-        return block.hash
+    def __init__(self) -> None:
+        self.__blockchain.append(
+            self.proof_of_work(
+                Block(0, datetime.datetime.now(), "Genesis Block", "0" * 64)
+            )
+        )
 
-    def isValid(self):
-        for i in range(1, len(self.blockchain)):
-            currentBlock = self.blockchain[i]
-            previousBlock = self.blockchain[i-1]
-            if currentBlock.hash != currentBlock.hashBlock():
+    def proof_of_work(self, block: Block) -> Block:
+        """hash block data until hash target is met
+
+        Args:
+            block (Block): new Block
+
+        Returns:
+            Block: new block with a new nonce that meets hash target requirements
+        """
+        new_hash: str = ""
+        _nonce: int = block.nonce
+
+        while new_hash[: len(HASH_TARGET)] != HASH_TARGET:
+            new_hash = hashlib.sha256(
+                f"{str(block.index)}{str(block.data)}{str(block.timestamp)}{str(block.previous_hash)}{str(_nonce)}".encode(
+                    "utf-8"
+                )
+            ).hexdigest()
+            _nonce += 1
+
+        return Block(
+            block.index,
+            block.timestamp,
+            block.data,
+            block.previous_hash,
+            nonce=_nonce - 1,
+            hash=new_hash,
+        )
+
+    def add_block(self, data: str) -> None:
+        """adds a new block to the chain with the given data attached
+
+        Args:
+            data (str): data to attach to the new block
+        """
+        previous_block: Block = self.__blockchain[-1]
+
+        new_block = self.proof_of_work(
+            Block(
+                len(self.__blockchain),
+                datetime.datetime.now(),
+                data,
+                previous_hash=previous_block.hash,
+            )
+        )
+
+        self.__blockchain.append(new_block)
+
+    def check_validity(self) -> bool:
+        """test that each blocks hash matches the value in the classes hash variable
+
+        Returns:
+            bool: pass/fail
+        """
+        current_block: Block = self.__blockchain[0]
+        previous_block: Block = None
+
+        # check that the first block's hash is correct before checking the rest of the chain
+        if current_block.hash != hashlib.sha256(current_block.hash_data).hexdigest():
+            return False
+
+        for i in range(1, len(self.__blockchain)):
+            current_block = self.__blockchain[i]
+            previous_block = self.__blockchain[i - 1]
+
+            if (
+                current_block.hash
+                != hashlib.sha256(current_block.hash_data).hexdigest()
+                or current_block.previous_hash != previous_block.hash
+            ):
                 return False
-            if currentBlock.previousHash != previousBlock.hash:
-                return False
+
         return True
 
 
-def main():
-    blockchain = Chain()
-    blockchain.addBlock("New Block 1")
-    blockchain.addBlock("New Block 2")
-    blockchain.addBlock("New Block 3")
-    for block in blockchain.getChain():
-        print(block.index, block.timestamp, block.previousHash,
-              block.hash, block.data, block.nonce)
-    print(blockchain.isValid())
+if __name__ == "__main__":
+    new_chain = Chain()
 
+    for i in range(10):
+        new_chain.add_block(f"Block {i}")
 
-main()
+    for _block in new_chain.blockchain:
+        print(_block)
+
+    print("Checking validity...")
+    print(f"Validity = {new_chain.check_validity()}")
